@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Read Thumbnail from EXIF</title>
+</head>
+<body>
+  <form>
+    <input type="file">
+  </form>
+<script>
+function getThumbnail(file) {
+  if (file.type === "image/jpeg") {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var array = new Uint8Array(e.target.result), start, end;
+      for (var i = 2; i < array.length; i++) {
+        if (array[i] === 0xFF) {
+          if (!start) {
+            if (array[i + 1] === 0xD8) {
+               start = i;
+            }
+          } else {
+            if (array[i + 1] === 0xD9) {
+              end = i;
+              break;
+            }
+          }
+        }a
+      }
+      if (start && end) {
+        var urlCreator = window.URL || window.webkitURL;
+        var imageUrl = urlCreator.createObjectURL(new Blob([array.subarray(start, end)], {type:"image/jpeg"}));
+        var imgf = new Image();
+        imgf.src = imageUrl;
+        document.body.appendChild(imgf);
+      }
+    };
+    reader.readAsArrayBuffer(file.slice(0, 50000));
+  }
+}
+document.querySelector('input').addEventListener('change',
+  function (e) {
+    e.preventDefault();
+    var target = e.dataTransfer || e.target;
+    var file = target && target.files && target.files[0];
+    getThumbnail(file);
+});
+</script>
+</body></html>
