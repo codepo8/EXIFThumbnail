@@ -6,45 +6,96 @@
 </head>
 <body>
   <form>
-    <input type="file">
+    <input type="file" multiple>
   </form>
 <script>
-function getThumbnail(file) {
-  if (file.type === "image/jpeg") {
-    var reader = new FileReader();
-    reader.onload = function (e) {
-      var array = new Uint8Array(e.target.result), start, end;
-      for (var i = 2; i < array.length; i++) {
-        if (array[i] === 0xFF) {
-          if (!start) {
-            if (array[i + 1] === 0xD8) {
-               start = i;
-            }
-          } else {
-            if (array[i + 1] === 0xD9) {
-              end = i + 2;
-              break;
-            }
-          }
-        }
-      }
-      if (start && end) {
-        var urlCreator = window.URL || window.webkitURL;
-        var imageUrl = urlCreator.createObjectURL(new Blob([array.subarray(start, end)], {type:"image/jpeg"}));
-        var imgf = new Image();
-        imgf.src = imageUrl;
-        document.body.appendChild(imgf);
-      }
-    };
-    reader.readAsArrayBuffer(file.slice(0, 50000));
-  }
-}
-document.querySelector('input').addEventListener('change',
-  function (e) {
-    e.preventDefault();
-    var target = e.dataTransfer || e.target;
-    var file = target && target.files && target.files[0];
-    getThumbnail(file);
+
+
+
+document.querySelector('input').addEventListener('change', async (e)=>{
+  e.stopPropagation();
+  e.preventDefault();
+  const target = e.target || e.dataTransfer ;
+  const files = target && target.files;
+  console.time('Total Time ------->');
+
+  for(let file of files){
+    // for (let index = 0; index < 1000; index++) { // Performance test
+          var response = getThumbnail(file);
+          await response.then((imageBlobUrl)=>{
+            var imgf = new Image();
+            imgf.src = imageBlobUrl;
+            document.body.appendChild(imgf);
+          }).catch((error)=>{
+            console.error('erro', error);
+          });
+    // } // endFor Performance test
+  } //endFor
+  console.timeEnd('Total Time ------->');
 });
+
+function getThumbnail(file) {
+    // console.log(e);
+    return new Promise((resolve, reject) => {
+      if (file.type !== "image/jpeg") { 
+        reject({ok:false, statusText: 'Invalid image/jpeg', fileName: file.name}); 
+      };
+      const reader = new FileReader();
+      reader.onload = (fileSlice)=>{
+        response = findThumbnail(fileSlice, file.name);
+        if (response.ok) resolve(response.body);
+        reject(response);
+      };
+      reader.readAsArrayBuffer(file.slice(0, 50000));
+    });
+}
+
+
+
+function findThumbnail(filePart, fileName) {
+  var array = new Uint8Array(filePart.target.result);
+  
+  [start, end, startIndex, endIndex, newArray] = findStartEnd(array);
+
+  if (start && end) {
+    var urlCreator = window.URL || window.webkitURL;
+    var thumb = new Blob([array.subarray(start, end)], {type:"image/jpeg"});
+    var imageBlobUrl = urlCreator.createObjectURL(thumb);
+    return {ok:true, statusText: 'ok', body: imageBlobUrl, start: start, end: end, startIndex: startIndex, endIndex: endIndex};
+
+  } else {
+    return {ok:false, statusText: 'Thumbnail not found', fileName: fileName, start: start, end: end, startIndex: startIndex, endIndex: endIndex};
+  }
+} //findThumbnail
+
+
+function findStartEnd(array) {
+  var start = false, end = false;
+  var x = array.length;
+  var startIndex = 0;
+  var endIndex = 0;
+  for (var i = 2; i < x; i++) {
+    if (array[i] === 0xFF) {
+      
+        if ( array[i + 1] === 0xD8) {
+          // console.log('START ', array[i], array[i+1], i);
+          if (i > startIndex) startIndex = i;
+          start = i;
+        }
+
+        else if (start && array[i + 1] === 0xD9) {
+          // console.log('END ', array[i], array[i+1], i);
+          if (i > endIndex) endIndex = i;
+          end = i+2 ;
+          break;
+        }
+
+    }
+  }
+  // console.log('startIndex', startIndex, 'endIndex', endIndex);
+  return [start, end, startIndex, endIndex];
+} //getStartEnd
+
+
 </script>
 </body></html>
