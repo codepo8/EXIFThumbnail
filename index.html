@@ -41,172 +41,169 @@ form {
   <section id="container"></section>
 
   <template id="imageTemplate">
-    <img src="${src}" width="${width}" height="${height}">
+    <img src="${src}" width="${width}" height="${height}" title="${title}">
   </template>
 
 
 
 <script>
-document.querySelector('input').addEventListener('change', async (e)=>{
-  e.stopPropagation();
-  e.preventDefault();
-  const target = e.target || e.dataTransfer ;
-  const files = target && target.files;
-  console.time('Total Time ------->');
+  document.querySelector('input').addEventListener('change', async (e)=>{
+    e.stopPropagation();
+    e.preventDefault();
+    const target = e.target || e.dataTransfer ;
+    const files = target && target.files;
+    console.time('Total Time ------->');
 
-  let container = document.getElementById("container");
-  let template = document.getElementById("imageTemplate").innerHTML;
-  container.innerText ='';
-  let templateContent ='';
+    let container = document.getElementById("container");
+    let template = document.getElementById("imageTemplate").innerHTML;
+    container.innerText ='';
+    let templateContent ='';
 
-  for(let file of files){
-    // for (let index = 0; index < 1000; index++) { // Performance test
-          var response = getThumb(file);
-          await response.then((response)=>{
+    let maxStartIndex = maxEndIndex = 0;
+
+    for(let file of files){
+      // for (let index = 0; index < 1000; index++) { // Performance test
+            var response = await getThumb(file);
             console.log(response);
 
-            variaveis = {
-              fileName: response.fileName, 
-              src: response.body, 
-              width: response.width,
-              height: response.height,
-            }
-            
-            // templateContent += templateApply(template, variaveis);
-            templateContent = templateApply(template, variaveis);
-            container.insertAdjacentHTML( 'beforeend', templateContent );
             
 
-            // var img = new Image();
-            // img.src = response.body;
-            // img.width = response.width;
-            // img.height = response.height;
-            // container.appendChild(img);
-          }).catch((error)=>{
-            console.error('erro', error);
-          });
-    // } // endFor Performance test
-  } //endFor
-  // container.insertAdjacentHTML( 'beforeend', templateContent );
+              maxStartIndex = Math.max(response.start, maxStartIndex);
+              maxEndIndex = Math.max(response.end, maxEndIndex);
+              
+              variaveis = {
+                fileName: response.fileName, 
+                title: response.fileName,
+                src: response.body, 
+                width: response.width,
+                height: response.height,
+              }
 
-  console.timeEnd('Total Time ------->');
-});
+              if (!response.ok) {
+                console.error('erro', response);
+                variaveis = {...variaveis, title: response.fileName+' '+response.statusText, src: '', width: 240, height: 180 }
+              }
+              // templateContent += templateApply(template, variaveis);
+              templateContent = templateApply(template, variaveis);
+              container.insertAdjacentHTML( 'beforeend', templateContent );
 
-let templateApply = (tpl, args) => tpl.replace(/\${(\w+)}/g, (_, v) => { return args[v] || '' });
+            
+              
+            
+      // } // endFor Performance test
+    } //endFor
+    
+    // container.insertAdjacentHTML( 'beforeend', templateContent );
+    console.log('maxStartIndex', maxStartIndex, 'maxEndIndex', maxEndIndex);
+    console.timeEnd('Total Time ------->');
+  });
 
-
-
-
-
-
-
-
-
-async function getThumb(file) {
-  responseThumb = await getThumbFind(file);
-  responseThumbSizes = {};
-  if (responseThumb.ok) {
-    responseThumbSizes = await getThumbSizes(responseThumb.body);
-  }
-  return {...responseThumb, ...responseThumbSizes};
-};
+  let templateApply = (tpl, args) => tpl.replace(/\${(\w+)}/g, (_, v) => { return args[v] || '' });
 
 
-function getThumbFind(file) {
 
-  return new Promise((resolve, reject) => {
 
-    if (file.type !== "image/jpeg") { 
-      reject({ok:false, statusText: 'Invalid image/jpeg', fileName: file.name}); 
-    };
 
-    const reader = new FileReader();
-    reader.readAsArrayBuffer(file.slice(0, 50000));
-    reader.onload = (fileSlice)=>{
-      response = findBlob(fileSlice, file.name);
-      if (response.ok) {
+
+
+
+
+  async function getThumb(file) {
+    responseThumbSizes = {};
+    responseThumb = await getThumbFind(file);
+    
+    if (responseThumb.ok) {
+      responseThumbSizes = await getThumbSizes(responseThumb.body);
+    }
+    return {...responseThumb, ...responseThumbSizes};
+  } //getThumb
+
+
+  function getThumbFind(file) {
+
+    return new Promise((resolve, reject) => {
+
+      if (file.type !== "image/jpeg") { 
+        reject({ok:false, statusText: 'Invalid image/jpeg', fileName: file.name}); 
+      };
+
+      const reader = new FileReader();
+      reader.readAsArrayBuffer(file.slice(0, 50000));
+      reader.onload = (fileSlice)=>{
+        response = findBlob(fileSlice, file.name);
         resolve(response);
       };
-      reject(response);
-    };
-    
-  });
-  
-}
-
-
-function findBlob(filePart, fileName) {
-  var array = new Uint8Array(filePart.target.result);
-  
-  [start, end, startIndex, endIndex, newArray] = findStartEnd(array);
-
-  if (start && end) {
-    var urlCreator = window.URL || window.webkitURL;
-    var thumb = new Blob([array.subarray(start, end)], {type:"image/jpeg"});
-    var imageBlobUrl = urlCreator.createObjectURL(thumb);
-    
-    // return {ok:true, statusText: 'ok', body: imageBlobUrl, start: start, end: end, startIndex: startIndex, endIndex: endIndex};
-    return {ok:true, statusText: 'ok', body: imageBlobUrl};
-
-  } else {
-    // return {ok:false, statusText: 'Thumbnail not found', fileName: fileName, start: start, end: end, startIndex: startIndex, endIndex: endIndex};
-    return {ok:false, statusText: 'Thumbnail not found', fileName: fileName};
-  }
-
-} //getThumbFindBlob
-
-
-function findStartEnd(array) {
-  var start = false, end = false;
-  var x = array.length;
-  var startIndex = 0;
-  var endIndex = 0;
-  for (var i = 2; i < x; i++) {
-    if (array[i] === 0xFF) {
       
-        if ( array[i + 1] === 0xD8) {
-          // console.log('START ', array[i], array[i+1], i);
-          if (i > startIndex) startIndex = i;
-          start = i;
-        }
-
-        else if (start && array[i + 1] === 0xD9) {
-          // console.log('END ', array[i], array[i+1], i);
-          if (i > endIndex) endIndex = i;
-          end = i+2 ;
-          break;
-        }
-
-    }
-  }
-  // console.log('startIndex', startIndex, 'endIndex', endIndex);
-  return [start, end, startIndex, endIndex];
-} //getStartEnd
+    });
+    
+  } //getThumbFind
 
 
-function getThumbSizes(blobImg) {
+  function findBlob(filePart, fileName) {
+    var array = new Uint8Array(filePart.target.result);
+    
+    [start, end] = findStartEnd(array);
+    
+    if (start && end) {
+      var urlCreator = window.URL || window.webkitURL;
+      var thumb = new Blob([array.subarray(start, end)], {type:"image/jpeg"});
+      var imageBlobUrl = urlCreator.createObjectURL(thumb);
+      
+      return {ok:true, statusText: 'ok', body: imageBlobUrl, fileName: fileName, start: start, end: end};
+      // return {ok:true, statusText: 'ok', body: imageBlobUrl, fileName: fileName};
 
-  return new Promise((resolve, reject) => {
-
-    var width, height;
-    var img = new Image();
-    img.src = blobImg;
-    img.onload = function() {
-      width = this.width;
-      height = this.height;
-      // console.log(width, height);
-      resolve({width: width, height: height});
+    } else {
+      // return {ok:false, statusText: 'Thumbnail not found', fileName: fileName, start: start, end: end};
+      return {ok:false, statusText: 'Thumbnail not found', fileName: fileName};
     }
 
-  });
-} // getThumbSizes
+  } //findBlob
 
 
+  function findStartEnd(array) {
+    var start = false, end = false;
+    var x = array.length;
+    for (var i = 2; i < x; i++) {
+      if (array[i] === 0xFF) {
+        
+          if ( array[i + 1] === 0xD8) {
+            // console.log('START ', array[i], array[i+1], i);
+            start = i;
+          }
+
+          else if (start && array[i + 1] === 0xD9) {
+            // console.log('END ', array[i], array[i+1], i);
+            end = i+2 ;
+            break;
+          }
+
+      }
+    }
+    console.log('start', start, 'end', end);
+    return [start, end];
+  } //findStartEnd
 
 
-
+  function getThumbSizes(blobImg) {
+  
+    return new Promise((resolve, reject) => {
+      var width, height;
+      var img = new Image();
+      img.src = blobImg;
+      img.onload = function() {
+        width = this.width;
+        height = this.height;
+        console.log(width, height);
+        resolve({width: width, height: height});
+      }
+      img.onerror = function(error) { 
+        resolve({ok:false, statusText: 'Thumbnail not found'});
+      }
+    });
+  } // getThumbSizes
 
 
 
 </script>
-</body></html>
+</body>
+</html>
