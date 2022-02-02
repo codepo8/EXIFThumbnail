@@ -92,7 +92,7 @@
 
             var response = await getThumb(file);
             if (response.ok == false) {
-              console.warn('erro', response);
+              console.warn(response.statusText, response);
               continue;
             }
 
@@ -109,7 +109,7 @@
             }
 
             if (response.thumbFound == false) {
-              console.warn('erro', response);
+              console.warn(response.statusText, response);
               let title = response.statusText + '\n\n' + response.fileName;
               variaveis = {...variaveis, title: title, width: 256, height: 171 }
             }
@@ -217,7 +217,7 @@
         resolve({width: width, height: height});
       }
       img.onerror = function(error) { 
-        resolve({ok:true, statusText: 'Thumbnail not found!'});
+        resolve({ok:true, thumbFound:false, statusText: 'Thumbnail not found!'});
       }
 
     });
