@@ -93,10 +93,11 @@
 
             maxStartIndex = Math.max(response.start, maxStartIndex);
             maxEndIndex = Math.max(response.end, maxEndIndex);
-            
+
+            let title = response.width + 'x' + response.height + 'px' + '\n\n' + response.fileName;
             variaveis = {
               fileName: response.fileName, 
-              title: response.fileName,
+              title: title,
               src: response.body, 
               width: response.width,
               height: response.height,
@@ -105,7 +106,7 @@
             if (!response.ok) {
               console.error('erro', response);
               let title = response.statusText + '\n\n' + response.fileName;
-              variaveis = {...variaveis, title: title, src: '', width: 240, height: 180 }
+              variaveis = {...variaveis, title: title, src: '', width: 256, height: 171 }
             }
             // templateContent += templateApply(template, variaveis);
             templateContent = templateApply(template, variaveis);
