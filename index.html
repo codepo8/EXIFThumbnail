@@ -10,26 +10,52 @@
             box-sizing: border-box;
     margin: 0;
     padding: 0;
-}
-  body {
-    display: inline-block;
-    text-align: center;
-    width: 100%;
-}
-form {
-  height: 80px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #f1f1f1;
-    margin-bottom: 20px;
-}
+  }
+    body {
+      display: inline-block;
+      text-align: center;
+      width: 100%;
+  }
+  form {
+    height: 80px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f1f1f1;
+      margin-bottom: 20px;
+  }
   img {
     vertical-align: middle;
     margin: 5px;
     border-radius: 6px;
     box-shadow: 0px 0px 5px #cccccc;
+    position: relative;
+    font-family: 'system-ui';
+    overflow: hidden;
   }
+
+  img:before { 
+    content: "\01F494" "\00000a" attr(title);
+    font-size: 16px;
+    font-family: "system-ui";
+    color: #606060;
+    color: #00000080;
+    display: flex;
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #eee;
+    justify-content: center;
+    align-items: center;
+    white-space: pre;
+  }
+
+
+
+  
 </style>
 </head>
 <body>
@@ -61,37 +87,31 @@ form {
 
     let maxStartIndex = maxEndIndex = 0;
 
-    for(let file of files){
-      // for (let index = 0; index < 1000; index++) { // Performance test
+    // for (let index = 0; index < 100; index++) { // Performance test
+          for(let file of files){
             var response = await getThumb(file);
-            console.log(response);
 
+            maxStartIndex = Math.max(response.start, maxStartIndex);
+            maxEndIndex = Math.max(response.end, maxEndIndex);
             
+            variaveis = {
+              fileName: response.fileName, 
+              title: response.fileName,
+              src: response.body, 
+              width: response.width,
+              height: response.height,
+            }
 
-              maxStartIndex = Math.max(response.start, maxStartIndex);
-              maxEndIndex = Math.max(response.end, maxEndIndex);
-              
-              variaveis = {
-                fileName: response.fileName, 
-                title: response.fileName,
-                src: response.body, 
-                width: response.width,
-                height: response.height,
-              }
-
-              if (!response.ok) {
-                console.error('erro', response);
-                variaveis = {...variaveis, title: response.fileName+' '+response.statusText, src: '', width: 240, height: 180 }
-              }
-              // templateContent += templateApply(template, variaveis);
-              templateContent = templateApply(template, variaveis);
-              container.insertAdjacentHTML( 'beforeend', templateContent );
-
-            
-              
-            
-      // } // endFor Performance test
-    } //endFor
+            if (!response.ok) {
+              console.error('erro', response);
+              let title = response.statusText + '\n\n' + response.fileName;
+              variaveis = {...variaveis, title: title, src: '', width: 240, height: 180 }
+            }
+            // templateContent += templateApply(template, variaveis);
+            templateContent = templateApply(template, variaveis);
+            container.insertAdjacentHTML( 'beforeend', templateContent );
+          } //endFor
+    // } // endFor Performance test
     
     // container.insertAdjacentHTML( 'beforeend', templateContent );
     console.log('maxStartIndex', maxStartIndex, 'maxEndIndex', maxEndIndex);
@@ -120,7 +140,6 @@ form {
 
 
   function getThumbFind(file) {
-
     return new Promise((resolve, reject) => {
 
       if (file.type !== "image/jpeg") { 
@@ -135,7 +154,6 @@ form {
       };
       
     });
-    
   } //getThumbFind
 
 
@@ -154,7 +172,7 @@ form {
 
     } else {
       // return {ok:false, statusText: 'Thumbnail not found', fileName: fileName, start: start, end: end};
-      return {ok:false, statusText: 'Thumbnail not found', fileName: fileName};
+      return {ok:false, statusText: 'Thumbnail not found!', fileName: fileName};
     }
 
   } //findBlob
@@ -179,13 +197,12 @@ form {
 
       }
     }
-    console.log('start', start, 'end', end);
+    // console.log('start', start, 'end', end);
     return [start, end];
   } //findStartEnd
 
 
   function getThumbSizes(blobImg) {
-  
     return new Promise((resolve, reject) => {
       var width, height;
       var img = new Image();
@@ -193,11 +210,11 @@ form {
       img.onload = function() {
         width = this.width;
         height = this.height;
-        console.log(width, height);
+        // console.log(width, height);
         resolve({width: width, height: height});
       }
       img.onerror = function(error) { 
-        resolve({ok:false, statusText: 'Thumbnail not found'});
+        resolve({ok:false, statusText: 'Thumbnail not found!'});
       }
     });
   } // getThumbSizes
