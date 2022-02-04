@@ -142,7 +142,7 @@
     responseThumbSizes = {};
     responseThumb = await getThumbFind(file);
     if (responseThumb.ok) {
-      responseThumbSizes = await getThumbSizes(responseThumb.src);
+      responseThumbSizes = await getThumbSize(responseThumb.src);
     }
     return {...responseThumb, ...responseThumbSizes};
   } //getThumb
@@ -205,7 +205,7 @@
   } //findStartEnd
 
 
-  function getThumbSizes(blobImg) {
+  function getThumbSize(blobImg) {
     return new Promise((resolve) => {
 
       var width, height;
